@@ -1,0 +1,42 @@
+<?php
+
+namespace App\Actions\Dashboard;
+
+use App\Http\Resources\RentalResource;
+use App\Models\Rental;
+use App\Models\Vehicle;
+use Carbon\CarbonImmutable;
+use Illuminate\Http\Request;
+
+class GetSummary
+{
+    public function handle(Request $request): array
+    {
+        $today = CarbonImmutable::today();
+        $vehicleQuery = Vehicle::query()->where('status', '!=', 'retired');
+        $vehicleCount = (clone $vehicleQuery)->count();
+        $rentedCount = (clone $vehicleQuery)->whereHas('currentRentals')->count();
+
+        $upcomingRentals = Rental::query()
+            ->with(['vehicle', 'renter'])
+            ->where('status', '!=', 'cancelled')
+            ->whereDate('start_date', '>=', $today)
+            ->orderBy('start_date')
+            ->orderBy('id')
+            ->limit(5)
+            ->get();
+
+        return [
+            'week' => [
+                'start_date' => $today->startOfWeek()->toDateString(),
+                'end_date' => $today->endOfWeek()->toDateString(),
+            ],
+            'vehicles' => [
+                'total' => $vehicleCount,
+                'rented' => $rentedCount,
+                'available' => $vehicleCount - $rentedCount,
+            ],
+            'upcoming_rentals' => RentalResource::collection($upcomingRentals)->resolve($request),
+        ];
+    }
+}
