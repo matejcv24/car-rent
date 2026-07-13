@@ -14,7 +14,7 @@ FROM node:22-bookworm AS frontend
 WORKDIR /app
 
 COPY frontend/package*.json ./
-RUN npm ci
+RUN npm install --include=dev --no-audit --no-fund
 
 COPY frontend ./
 ARG VITE_API_URL=/api/v1
