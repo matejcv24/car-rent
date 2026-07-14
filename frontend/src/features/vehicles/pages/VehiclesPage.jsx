@@ -37,6 +37,17 @@ const initialVehicleForm = {
   registrationExpiryDate: '',
 }
 
+const initialRentalForm = {
+  vehicle: '',
+  name: '',
+  phone: '',
+  email: '',
+  startDate: '',
+  endDate: '',
+  paidStatus: '',
+  totalPrice: '',
+}
+
 function formatDateDisplay(value) {
   if (!value) return ''
   const [year, month, day] = value.split('-')
@@ -145,15 +156,23 @@ export default function VehiclesPage() {
   const [editingVehicle, setEditingVehicle] = useState(null)
   const [historyVehicle, setHistoryVehicle] = useState(null)
   const [historyRentals, setHistoryRentals] = useState([])
+  const [selectedRental, setSelectedRental] = useState(null)
+  const [rentalPendingDelete, setRentalPendingDelete] = useState(null)
   const [isHistoryLoading, setIsHistoryLoading] = useState(false)
   const [historyError, setHistoryError] = useState('')
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [datePickerField, setDatePickerField] = useState('registrationStartDate')
   const [datePickerValue, setDatePickerValue] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [isRentalSaving, setIsRentalSaving] = useState(false)
+  const [isRentalDeleting, setIsRentalDeleting] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [rentalSaveError, setRentalSaveError] = useState('')
+  const [rentalDeleteError, setRentalDeleteError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
+  const [rentalFieldErrors, setRentalFieldErrors] = useState({})
   const [vehicleForm, setVehicleForm] = useState(initialVehicleForm)
+  const [rentalForm, setRentalForm] = useState(initialRentalForm)
   const [vehicles, setVehicles] = useState([])
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true)
   const [vehiclesError, setVehiclesError] = useState('')
@@ -180,6 +199,11 @@ export default function VehiclesPage() {
   const updateField = (field, value) => {
     setVehicleForm((prev) => ({ ...prev, [field]: value }))
     setFieldErrors((prev) => ({ ...prev, [field]: undefined }))
+  }
+
+  const updateRentalField = (field, value) => {
+    setRentalForm((prev) => ({ ...prev, [field]: value }))
+    setRentalFieldErrors((prev) => ({ ...prev, [field]: undefined }))
   }
 
   const blurActiveElement = () => {
@@ -242,6 +266,52 @@ export default function VehiclesPage() {
     setHistoryVehicle(null)
     setHistoryRentals([])
     setHistoryError('')
+    setSelectedRental(null)
+    setRentalPendingDelete(null)
+    setRentalForm(initialRentalForm)
+    setRentalSaveError('')
+    setRentalDeleteError('')
+    setRentalFieldErrors({})
+  }
+
+  const openRentalDetails = (rental) => {
+    blurActiveElement()
+    setSelectedRental(rental)
+    setRentalForm({
+      vehicle: String(rental.vehicle.id),
+      name: getRentalName(rental),
+      phone: rental.renter?.phone ?? '',
+      email: rental.renter?.email ?? '',
+      startDate: rental.start_date ?? '',
+      endDate: rental.end_date ?? '',
+      paidStatus: rental.payment_status ?? '',
+      totalPrice: rental.total_price ?? '',
+    })
+    setRentalSaveError('')
+    setRentalFieldErrors({})
+  }
+
+  const closeRentalDetails = () => {
+    if (isRentalSaving || isRentalDeleting) return
+    blurActiveElement()
+    setSelectedRental(null)
+    setRentalForm(initialRentalForm)
+    setRentalSaveError('')
+    setRentalFieldErrors({})
+  }
+
+  const openRentalDeleteDialog = () => {
+    if (!selectedRental) return
+    blurActiveElement()
+    setRentalPendingDelete(selectedRental)
+    setRentalDeleteError('')
+  }
+
+  const closeRentalDeleteDialog = () => {
+    if (isRentalDeleting) return
+    blurActiveElement()
+    setRentalPendingDelete(null)
+    setRentalDeleteError('')
   }
 
   const openDatePicker = (field) => {
@@ -265,6 +335,13 @@ export default function VehiclesPage() {
     vehicleForm.model.trim() &&
       vehicleForm.licensePlate.trim() &&
       vehicleForm.type,
+  )
+
+  const canSaveRental = Boolean(
+    rentalForm.vehicle &&
+      rentalForm.name.trim() &&
+      rentalForm.startDate &&
+      rentalForm.endDate,
   )
 
   const handleSaveVehicle = async () => {
@@ -330,6 +407,78 @@ export default function VehiclesPage() {
     }
   }
 
+  const handleSaveRental = async () => {
+    if (!selectedRental || !canSaveRental) {
+      return
+    }
+
+    setRentalSaveError('')
+    setRentalFieldErrors({})
+    setIsRentalSaving(true)
+
+    try {
+      const payload = {
+        vehicle_id: parseInt(rentalForm.vehicle),
+        start_date: rentalForm.startDate,
+        end_date: rentalForm.endDate,
+        payment_status: rentalForm.paidStatus === 'paid' ? 'paid' : 'unpaid',
+        total_price: Number(rentalForm.totalPrice || 0),
+        renter: {
+          first_name: rentalForm.name.trim(),
+          last_name: '',
+          phone: rentalForm.phone.trim(),
+          email: rentalForm.email.trim(),
+        },
+      }
+
+      const response = await api.put(`/rentals/${selectedRental.id}`, payload)
+      const updatedRental = response.data.data
+
+      setHistoryRentals((prev) => prev.map((rental) => (rental.id === updatedRental.id ? updatedRental : rental)))
+      setSelectedRental(null)
+      setRentalForm(initialRentalForm)
+      fetchVehicles()
+    } catch (error) {
+      const errors = getApiErrors(error)
+
+      setRentalFieldErrors({
+        vehicle: errors.vehicle_id?.[0],
+        name: errors['renter.first_name']?.[0],
+        phone: errors['renter.phone']?.[0],
+        email: errors['renter.email']?.[0],
+        startDate: errors.start_date?.[0],
+        endDate: errors.end_date?.[0],
+        paidStatus: errors.payment_status?.[0],
+        totalPrice: errors.total_price?.[0],
+      })
+      setRentalSaveError(getApiMessage(error, 'Failed to save rental. Please try again.'))
+    } finally {
+      setIsRentalSaving(false)
+    }
+  }
+
+  const handleDeleteRental = async () => {
+    if (!rentalPendingDelete) {
+      return
+    }
+
+    setRentalDeleteError('')
+    setIsRentalDeleting(true)
+
+    try {
+      await api.delete(`/rentals/${rentalPendingDelete.id}`)
+      setHistoryRentals((prev) => prev.filter((rental) => rental.id !== rentalPendingDelete.id))
+      setRentalPendingDelete(null)
+      setSelectedRental(null)
+      setRentalForm(initialRentalForm)
+      fetchVehicles()
+    } catch (error) {
+      setRentalDeleteError(getApiMessage(error, 'Failed to delete rental. Please try again.'))
+    } finally {
+      setIsRentalDeleting(false)
+    }
+  }
+
   const handleCloseVehicleModal = () => {
     closeAddVehicle()
     if (!isSaving) {
@@ -372,6 +521,15 @@ export default function VehiclesPage() {
         {historyRentals.map((rental) => (
           <Box
             key={rental.id}
+            role="button"
+            tabIndex={0}
+            onClick={() => openRentalDetails(rental)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                openRentalDetails(rental)
+              }
+            }}
             sx={{
               border: 1,
               borderColor: 'divider',
@@ -379,6 +537,13 @@ export default function VehiclesPage() {
               p: 1.5,
               display: 'grid',
               gap: 0.5,
+              cursor: 'pointer',
+              transition: 'border-color 0.2s ease, background-color 0.2s ease',
+              '&:hover, &:focus-visible': {
+                borderColor: 'primary.main',
+                bgcolor: 'action.hover',
+                outline: 'none',
+              },
             }}
           >
             <Typography sx={{ fontWeight: 800 }}>{getRentalName(rental)}</Typography>
@@ -386,7 +551,7 @@ export default function VehiclesPage() {
               {formatDateDisplay(rental.start_date)} - {formatDateDisplay(rental.end_date)}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Status: {rental.status} | Payment: {rental.payment_status}
+              Payment: {rental.payment_status}
             </Typography>
           </Box>
         ))}
@@ -611,6 +776,179 @@ export default function VehiclesPage() {
           </IconButton>
         </DialogTitle>
         <DialogContent dividers>{renderHistoryContent()}</DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(selectedRental)} onClose={closeRentalDetails} fullWidth maxWidth="sm" aria-label="Rental details">
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+          <Box>
+            <Typography sx={{ fontWeight: 800 }}>Rental details</Typography>
+            {selectedRental && (
+              <Typography variant="body2" color="text.secondary">
+                {selectedRental.vehicle.license_plate} - {selectedRental.vehicle.model}
+              </Typography>
+            )}
+          </Box>
+          <IconButton onClick={closeRentalDetails} size="small" aria-label="Close rental details" disabled={isRentalSaving}>
+            <CloseRoundedIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {rentalSaveError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {rentalSaveError}
+            </Alert>
+          )}
+
+          <Stack spacing={2} sx={{ py: 1 }}>
+            <FormControl fullWidth required disabled={isRentalSaving} error={Boolean(rentalFieldErrors.vehicle)}>
+              <InputLabel id="history-rental-vehicle-label">Vehicle</InputLabel>
+              <Select
+                labelId="history-rental-vehicle-label"
+                label="Vehicle"
+                value={rentalForm.vehicle}
+                onChange={(event) => updateRentalField('vehicle', event.target.value)}
+              >
+                {vehicles.map((vehicle) => (
+                  <MenuItem key={vehicle.id} value={String(vehicle.id)}>
+                    {vehicle.model} - {vehicle.license_plate}
+                  </MenuItem>
+                ))}
+              </Select>
+              {rentalFieldErrors.vehicle && (
+                <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                  {rentalFieldErrors.vehicle}
+                </Typography>
+              )}
+            </FormControl>
+
+            <TextField
+              label="Name and Surname"
+              value={rentalForm.name}
+              onChange={(event) => updateRentalField('name', event.target.value)}
+              error={Boolean(rentalFieldErrors.name)}
+              helperText={rentalFieldErrors.name}
+              fullWidth
+              required
+              disabled={isRentalSaving}
+            />
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+              <TextField
+                label="Mobile phone"
+                value={rentalForm.phone}
+                onChange={(event) => updateRentalField('phone', event.target.value)}
+                error={Boolean(rentalFieldErrors.phone)}
+                helperText={rentalFieldErrors.phone}
+                fullWidth
+                disabled={isRentalSaving || isRentalDeleting}
+              />
+              <TextField
+                label="Email address"
+                value={rentalForm.email}
+                onChange={(event) => updateRentalField('email', event.target.value)}
+                error={Boolean(rentalFieldErrors.email)}
+                helperText={rentalFieldErrors.email}
+                fullWidth
+                disabled={isRentalSaving || isRentalDeleting}
+              />
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+              <TextField
+                label="Start date"
+                type="date"
+                value={rentalForm.startDate}
+                onChange={(event) => updateRentalField('startDate', event.target.value)}
+                error={Boolean(rentalFieldErrors.startDate)}
+                helperText={rentalFieldErrors.startDate}
+                fullWidth
+                required
+                disabled={isRentalSaving}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+              <TextField
+                label="End date"
+                type="date"
+                value={rentalForm.endDate}
+                onChange={(event) => updateRentalField('endDate', event.target.value)}
+                error={Boolean(rentalFieldErrors.endDate)}
+                helperText={rentalFieldErrors.endDate}
+                fullWidth
+                required
+                disabled={isRentalSaving}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+              <FormControl fullWidth error={Boolean(rentalFieldErrors.paidStatus)} disabled={isRentalSaving || isRentalDeleting}>
+                <InputLabel>Payment status</InputLabel>
+                <Select
+                  value={rentalForm.paidStatus}
+                  onChange={(event) => updateRentalField('paidStatus', event.target.value)}
+                  label="Payment status"
+                >
+                  <MenuItem value="paid">Paid</MenuItem>
+                  <MenuItem value="unpaid">Unpaid</MenuItem>
+                </Select>
+                {rentalFieldErrors.paidStatus && (
+                  <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                    {rentalFieldErrors.paidStatus}
+                  </Typography>
+                )}
+              </FormControl>
+              <TextField
+                label="Total price"
+                type="number"
+                value={rentalForm.totalPrice}
+                onChange={(event) => updateRentalField('totalPrice', event.target.value)}
+                error={Boolean(rentalFieldErrors.totalPrice)}
+                helperText={rentalFieldErrors.totalPrice}
+                fullWidth
+                disabled={isRentalSaving || isRentalDeleting}
+                slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
+              />
+            </Box>
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 1, p: 2 }}>
+          <Button onClick={closeRentalDetails} variant="outlined" disabled={isRentalSaving || isRentalDeleting} sx={{ minWidth: 0 }}>
+            Cancel
+          </Button>
+          <Button onClick={openRentalDeleteDialog} variant="contained" color="error" disabled={isRentalSaving || isRentalDeleting} sx={{ minWidth: 0, color: 'common.white' }}>
+            Delete
+          </Button>
+          <Button onClick={handleSaveRental} variant="contained" disabled={isRentalSaving || isRentalDeleting || !canSaveRental} sx={{ minWidth: 0, color: 'common.white' }}>
+            {isRentalSaving ? 'Saving...' : 'Save changes'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(rentalPendingDelete)} onClose={closeRentalDeleteDialog} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+          Delete rental
+          <IconButton onClick={closeRentalDeleteDialog} size="small" disabled={isRentalDeleting}>
+            <CloseRoundedIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {rentalDeleteError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {rentalDeleteError}
+            </Alert>
+          )}
+          <Typography sx={{ fontWeight: 700 }}>
+            Are you sure that you want to delete this rental?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, p: 2 }}>
+          <Button onClick={handleDeleteRental} variant="contained" color="error" disabled={isRentalDeleting} sx={{ color: 'common.white' }}>
+            {isRentalDeleting ? 'Deleting...' : 'Yes'}
+          </Button>
+          <Button onClick={closeRentalDeleteDialog} variant="outlined" disabled={isRentalDeleting} sx={{ borderColor: '#0096FF', color: '#0096FF' }}>
+            No
+          </Button>
+        </DialogActions>
       </Dialog>
 
       <Dialog open={datePickerOpen} onClose={closeDatePicker} maxWidth="xs" fullWidth>

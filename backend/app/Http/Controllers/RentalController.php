@@ -8,10 +8,15 @@ use App\Http\Requests\StoreRentalRequest;
 use App\Http\Requests\UpdateRentalRequest;
 use App\Http\Resources\RentalResource;
 use App\Models\Rental;
+use App\Models\Vehicle;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\Response;
+use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class RentalController extends Controller
 {
@@ -45,10 +50,69 @@ class RentalController extends Controller
 
     public function update(UpdateRentalRequest $request, Rental $rental): RentalResource
     {
-        $rental->update($request->validated());
+        $data = $request->validated();
+
+        DB::transaction(function () use ($data, $rental): void {
+            $vehicleId = $data['vehicle_id'] ?? $rental->vehicle_id;
+            $startDate = $data['start_date'] ?? $rental->start_date->toDateString();
+            $endDate = $data['end_date'] ?? $rental->end_date->toDateString();
+
+            if (array_key_exists('vehicle_id', $data) || array_key_exists('start_date', $data) || array_key_exists('end_date', $data)) {
+                $vehicle = Vehicle::query()->lockForUpdate()->findOrFail($vehicleId);
+
+                $conflictingRentals = Rental::query()
+                    ->whereKeyNot($rental->id)
+                    ->where('vehicle_id', $vehicleId)
+                    ->where('status', '!=', 'cancelled')
+                    ->whereDate('start_date', '<', $endDate)
+                    ->whereDate('end_date', '>', $startDate)
+                    ->orderBy('start_date')
+                    ->get(['start_date', 'end_date']);
+
+                if ($conflictingRentals->isNotEmpty()) {
+                    $vehicleLabel = trim("{$vehicle->model} - {$vehicle->license_plate}");
+                    $bookedDates = $conflictingRentals
+                        ->map(fn (Rental $conflict): string => sprintf(
+                            '%s to %s',
+                            $conflict->start_date->format('d/m/Y'),
+                            $conflict->end_date->format('d/m/Y'),
+                        ))
+                        ->join(', ');
+
+                    throw ValidationException::withMessages([
+                        'vehicle_id' => ["{$vehicleLabel} can't be rented because it is already rented from {$bookedDates}."],
+                    ]);
+                }
+            }
+
+            if (array_key_exists('renter', $data)) {
+                $rental->renter->update([
+                    'first_name' => trim((string) ($data['renter']['first_name'] ?? '')),
+                    'last_name' => trim((string) ($data['renter']['last_name'] ?? '')),
+                    'phone' => trim((string) ($data['renter']['phone'] ?? '')),
+                    'email' => trim((string) ($data['renter']['email'] ?? '')) ?: null,
+                ]);
+            }
+
+            $rental->update(Arr::only($data, [
+                'vehicle_id',
+                'start_date',
+                'end_date',
+                'status',
+                'payment_status',
+                'total_price',
+            ]));
+        });
 
         return (new RentalResource($rental->refresh()->load(['vehicle', 'renter'])))
             ->additional(['success' => true]);
+    }
+
+    public function destroy(Rental $rental): Response
+    {
+        $rental->delete();
+
+        return response()->noContent();
     }
 
     public function upcoming(Request $request): AnonymousResourceCollection

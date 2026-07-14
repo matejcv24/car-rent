@@ -76,6 +76,55 @@ class RentalApiTest extends TestCase
             ->assertJsonPath('data.payment_status', 'paid');
     }
 
+    public function test_rental_details_can_be_updated(): void
+    {
+        $this->actingAs(User::factory()->create(), 'sanctum');
+        $rental = $this->createRental();
+        $vehicle = Vehicle::create([
+            'license_plate' => 'SK-5678-CD',
+            'model' => 'Mercedes Vito',
+            'type' => 'van',
+        ]);
+
+        $this->putJson("/api/v1/rentals/{$rental->id}", [
+            'vehicle_id' => $vehicle->id,
+            'start_date' => '2026-06-22',
+            'end_date' => '2026-06-25',
+            'payment_status' => 'paid',
+            'total_price' => 420,
+            'renter' => [
+                'first_name' => 'Martin',
+                'last_name' => '',
+                'phone' => '070123456',
+                'email' => 'martin@example.com',
+            ],
+        ])->assertOk()
+            ->assertJsonPath('data.vehicle.id', $vehicle->id)
+            ->assertJsonPath('data.renter.full_name', 'Martin')
+            ->assertJsonPath('data.start_date', '2026-06-22')
+            ->assertJsonPath('data.end_date', '2026-06-25')
+            ->assertJsonPath('data.payment_status', 'paid');
+
+        $this->assertDatabaseHas('renters', [
+            'id' => $rental->renter_id,
+            'first_name' => 'Martin',
+            'phone' => '070123456',
+        ]);
+    }
+
+    public function test_rental_can_be_deleted(): void
+    {
+        $this->actingAs(User::factory()->create(), 'sanctum');
+        $rental = $this->createRental();
+
+        $this->deleteJson("/api/v1/rentals/{$rental->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('rentals', [
+            'id' => $rental->id,
+        ]);
+    }
+
     public function test_upcoming_rentals_include_ongoing_bookings_and_exclude_cancelled_ones(): void
     {
         $this->travelTo('2026-06-16 12:00:00');

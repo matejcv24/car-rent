@@ -21,11 +21,15 @@ function formatDateDisplay(value) {
 export default function DashboardPage() {
   const dashboard = useDashboardData()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [editingRental, setEditingRental] = useState(null)
+  const [deletingRental, setDeletingRental] = useState(null)
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [datePickerField, setDatePickerField] = useState('startDate')
   const [datePickerValue, setDatePickerValue] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [deleteError, setDeleteError] = useState('')
   const [vehicles, setVehicles] = useState([])
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(false)
   const [vehiclesError, setVehiclesError] = useState('')
@@ -67,7 +71,26 @@ export default function DashboardPage() {
 
   const openRentalDialog = () => {
     blurActiveElement()
+    setEditingRental(null)
     resetRentalForm()
+    setIsDialogOpen(true)
+    fetchVehicles()
+  }
+
+  const openEditRentalDialog = (rental) => {
+    blurActiveElement()
+    setEditingRental(rental)
+    setSaveError('')
+    setFieldErrors({})
+    setRenterForm({
+      vehicle: String(rental.vehicle.id),
+      name: rental.renter.full_name,
+      phone: rental.renter.phone ?? '',
+      email: rental.renter.email ?? '',
+      startDate: rental.start_date,
+      endDate: rental.end_date,
+      paidStatus: rental.payment_status,
+    })
     setIsDialogOpen(true)
     fetchVehicles()
   }
@@ -75,7 +98,24 @@ export default function DashboardPage() {
   const closeRentalDialog = () => {
     blurActiveElement()
     setIsDialogOpen(false)
+    setEditingRental(null)
     resetRentalForm()
+  }
+
+  const openDeleteRentalDialog = (rental) => {
+    blurActiveElement()
+    setDeletingRental(rental)
+    setDeleteError('')
+  }
+
+  const closeDeleteRentalDialog = () => {
+    if (isDeleting) {
+      return
+    }
+
+    blurActiveElement()
+    setDeletingRental(null)
+    setDeleteError('')
   }
 
   const fetchVehicles = async () => {
@@ -99,7 +139,7 @@ export default function DashboardPage() {
   const canSaveRental = Boolean(
     renterForm.vehicle &&
       renterForm.name.trim() &&
-      renterForm.phone.trim() &&
+      (editingRental || renterForm.phone.trim()) &&
       renterForm.startDate &&
       renterForm.endDate,
   )
@@ -132,9 +172,14 @@ export default function DashboardPage() {
         payload.payment_status = renterForm.paidStatus === 'paid' ? 'paid' : 'unpaid'
       }
 
-      await api.post('/rentals', payload)
+      if (editingRental) {
+        await api.put(`/rentals/${editingRental.id}`, payload)
+      } else {
+        await api.post('/rentals', payload)
+      }
 
       setIsDialogOpen(false)
+      setEditingRental(null)
       resetRentalForm()
       dashboard.retry()
     } catch (error) {
@@ -153,6 +198,25 @@ export default function DashboardPage() {
       setSaveError(vehicleError ? '' : getApiMessage(error, 'Failed to save rental. Please try again.'))
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleDeleteRental = async () => {
+    if (!deletingRental) {
+      return
+    }
+
+    setDeleteError('')
+    setIsDeleting(true)
+
+    try {
+      await api.delete(`/rentals/${deletingRental.id}`)
+      setDeletingRental(null)
+      dashboard.retry()
+    } catch (error) {
+      setDeleteError(getApiMessage(error, 'Failed to delete rental. Please try again.'))
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -218,7 +282,7 @@ export default function DashboardPage() {
         }}
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, px: { xs: 2, sm: 3 }, py: { xs: 1.5, sm: 2 } }}>
-          New rental
+          {editingRental ? 'Edit rental' : 'New rental'}
           <IconButton onClick={closeRentalDialog} size="small">
             <CloseRoundedIcon />
           </IconButton>
@@ -289,7 +353,7 @@ export default function DashboardPage() {
                   label="Mobile phone"
                   placeholder="+389 70 123 456"
                   fullWidth
-                  required
+                  required={!editingRental}
                   name="rental-contact-number"
                   autoComplete="new-password"
                   value={renterForm.phone}
@@ -405,7 +469,7 @@ export default function DashboardPage() {
                 label="Payment status"
               >
                 <MenuItem value="paid">Paid</MenuItem>
-                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="unpaid">Unpaid</MenuItem>
               </Select>
               {fieldErrors.paidStatus && (
                 <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
@@ -423,7 +487,7 @@ export default function DashboardPage() {
             sx={{ color: 'common.white', flex: 1 }}
             disabled={isSaving || !canSaveRental}
           >
-            {isSaving ? 'Saving...' : 'Save'}
+            {isSaving ? 'Saving...' : editingRental ? 'Save changes' : 'Save'}
           </Button>
           <Button onClick={closeRentalDialog} variant="outlined" sx={{ flex: 1 }} disabled={isSaving}>
             Cancel
@@ -448,10 +512,41 @@ export default function DashboardPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={Boolean(deletingRental)} onClose={closeDeleteRentalDialog} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+          Delete rental
+          <IconButton onClick={closeDeleteRentalDialog} size="small" disabled={isDeleting}>
+            <CloseRoundedIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {deleteError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {deleteError}
+            </Alert>
+          )}
+          <Typography sx={{ fontWeight: 700 }}>
+            Are you sure that you want to delete this rent?
+          </Typography>
+        </DialogContent>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1.5, px: 3, py: 2, borderTop: 1, borderColor: 'divider' }}>
+          <Button onClick={handleDeleteRental} variant="contained" color="error" sx={{ color: 'common.white', flex: 1 }} disabled={isDeleting}>
+            {isDeleting ? 'Deleting...' : 'Yes'}
+          </Button>
+          <Button onClick={closeDeleteRentalDialog} variant="outlined" sx={{ flex: 1, borderColor: '#0096FF', color: '#0096FF' }} disabled={isDeleting}>
+            No
+          </Button>
+        </Box>
+      </Dialog>
+
       {dashboard.isLoading && !dashboard.summary ? (
         <Skeleton variant="rounded" height={260} sx={{ mt: 3 }} />
       ) : (
-        <UpcomingRentals rentals={dashboard.summary?.upcoming_rentals ?? []} />
+        <UpcomingRentals
+          rentals={dashboard.summary?.upcoming_rentals ?? []}
+          onEditRental={openEditRentalDialog}
+          onDeleteRental={openDeleteRentalDialog}
+        />
       )}
     </Box>
   )

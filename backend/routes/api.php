@@ -38,6 +38,7 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/vehicles/{vehicle}/services', [VehicleController::class, 'storeService']);
             Route::post('/rentals', [RentalController::class, 'store']);
             Route::put('/rentals/{rental}', [RentalController::class, 'update']);
+            Route::delete('/rentals/{rental}', [RentalController::class, 'destroy']);
         });
     });
 });

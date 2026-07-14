@@ -17,13 +17,13 @@ class GetSummary
         $vehicleCount = (clone $vehicleQuery)->count();
         $rentedCount = (clone $vehicleQuery)->whereHas('currentRentals')->count();
 
-        $upcomingRentals = Rental::query()
+        $activeRentals = Rental::query()
             ->with(['vehicle', 'renter'])
             ->where('status', '!=', 'cancelled')
-            ->whereDate('start_date', '>=', $today)
+            ->whereDate('end_date', '>=', $today)
             ->orderBy('start_date')
             ->orderBy('id')
-            ->limit(5)
+            ->limit(4)
             ->get();
 
         return [
@@ -36,7 +36,7 @@ class GetSummary
                 'rented' => $rentedCount,
                 'available' => $vehicleCount - $rentedCount,
             ],
-            'upcoming_rentals' => RentalResource::collection($upcomingRentals)->resolve($request),
+            'upcoming_rentals' => RentalResource::collection($activeRentals)->resolve($request),
         ];
     }
 }

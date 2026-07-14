@@ -97,7 +97,7 @@ class DashboardApiTest extends TestCase
             ->assertJsonPath('data.alerts.1.type', 'maintenance');
     }
 
-    public function test_summary_returns_fleet_counts_and_upcoming_rentals(): void
+    public function test_summary_returns_fleet_counts_and_active_rentals_until_their_end_date(): void
     {
         $this->travelTo('2026-06-16 12:00:00');
         $this->actingAs(User::factory()->create(), 'sanctum');
@@ -116,6 +116,22 @@ class DashboardApiTest extends TestCase
             'status' => 'active',
             'total_price' => 300,
         ]);
+        $futureRental = Rental::create([
+            'vehicle_id' => $rentedVehicle->id,
+            'renter_id' => $renter->id,
+            'start_date' => '2026-06-20',
+            'end_date' => '2026-06-23',
+            'status' => 'pending',
+            'total_price' => 300,
+        ]);
+        Rental::create([
+            'vehicle_id' => $rentedVehicle->id,
+            'renter_id' => $renter->id,
+            'start_date' => '2026-06-10',
+            'end_date' => '2026-06-15',
+            'status' => 'completed',
+            'total_price' => 300,
+        ]);
 
         $this->getJson('/api/v1/dashboard/summary')
             ->assertOk()
@@ -124,7 +140,9 @@ class DashboardApiTest extends TestCase
             ->assertJsonPath('data.vehicles.total', 2)
             ->assertJsonPath('data.vehicles.rented', 1)
             ->assertJsonPath('data.vehicles.available', 1)
-            ->assertJsonPath('data.upcoming_rentals.0.id', $rental->id);
+            ->assertJsonCount(2, 'data.upcoming_rentals')
+            ->assertJsonPath('data.upcoming_rentals.0.id', $rental->id)
+            ->assertJsonPath('data.upcoming_rentals.1.id', $futureRental->id);
     }
 
     private function createVehicle(): Vehicle

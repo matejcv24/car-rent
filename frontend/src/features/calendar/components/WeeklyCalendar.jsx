@@ -11,11 +11,11 @@ function includesDate(range, date) {
 
 export default function WeeklyCalendar({ calendar, onPrevious, onToday, onNext }) {
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState('all')
-  const vehicleColumnWidth = 92
-  const dateColumnWidth = 60
+  const vehicleColumnWidth = 116
+  const dateColumnWidth = 86
   const calendarColumns = `${vehicleColumnWidth}px repeat(7, ${dateColumnWidth}px)`
   const gridWidth = vehicleColumnWidth + (dateColumnWidth * 7)
-  const rowHeight = 68
+  const rowHeight = 76
   const headerHeight = 62
   const visibleVehicles = vehicleTypeFilter === 'all'
     ? calendar.vehicles
@@ -46,7 +46,7 @@ export default function WeeklyCalendar({ calendar, onPrevious, onToday, onNext }
         </Box>
       </Box>
 
-      <Box sx={{ width: '100%', overflow: 'auto', maxHeight: headerHeight + (rowHeight * 4) }}>
+      <Box sx={{ width: '100%', overflowX: 'auto', overflowY: 'visible' }}>
         <Box sx={{ display: 'grid', gridTemplateColumns: calendarColumns, bgcolor: '#f7f9f8', width: gridWidth, position: 'sticky', top: 0, zIndex: 4 }}>
           <Box sx={{ px: 0.8, py: 1, minHeight: headerHeight, borderRight: 1, borderBottom: 1, borderColor: 'divider', position: 'sticky', left: 0, zIndex: 5, bgcolor: '#f7f9f8' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
