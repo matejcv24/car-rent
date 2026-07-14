@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingRental, setEditingRental] = useState(null)
   const [deletingRental, setDeletingRental] = useState(null)
+  const [selectedRenter, setSelectedRenter] = useState(null)
   const [datePickerOpen, setDatePickerOpen] = useState(false)
   const [datePickerField, setDatePickerField] = useState('startDate')
   const [datePickerValue, setDatePickerValue] = useState(null)
@@ -116,6 +117,16 @@ export default function DashboardPage() {
     blurActiveElement()
     setDeletingRental(null)
     setDeleteError('')
+  }
+
+  const openRenterDetailsDialog = (renter) => {
+    blurActiveElement()
+    setSelectedRenter(renter)
+  }
+
+  const closeRenterDetailsDialog = () => {
+    blurActiveElement()
+    setSelectedRenter(null)
   }
 
   const fetchVehicles = async () => {
@@ -267,6 +278,7 @@ export default function DashboardPage() {
           onPrevious={dashboard.previousWeek}
           onToday={dashboard.currentWeek}
           onNext={dashboard.nextWeek}
+          onRenterClick={openRenterDetailsDialog}
         />
       ) : null}
 
@@ -537,6 +549,39 @@ export default function DashboardPage() {
             No
           </Button>
         </Box>
+      </Dialog>
+
+      <Dialog open={Boolean(selectedRenter)} onClose={closeRenterDetailsDialog} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+          Renter details
+          <IconButton onClick={closeRenterDetailsDialog} size="small">
+            <CloseRoundedIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {selectedRenter && (
+            <Stack spacing={1.5}>
+              <Box>
+                <Typography variant="caption" color="text.secondary">Name and surname</Typography>
+                <Typography sx={{ fontWeight: 800 }}>
+                  {[selectedRenter.first_name, selectedRenter.last_name].filter(Boolean).join(' ') || selectedRenter.name}
+                </Typography>
+              </Box>
+              {selectedRenter.phone && (
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Mobile phone</Typography>
+                  <Typography sx={{ fontWeight: 700 }}>{selectedRenter.phone}</Typography>
+                </Box>
+              )}
+              {selectedRenter.email && (
+                <Box>
+                  <Typography variant="caption" color="text.secondary">Email address</Typography>
+                  <Typography sx={{ fontWeight: 700 }}>{selectedRenter.email}</Typography>
+                </Box>
+              )}
+            </Stack>
+          )}
+        </DialogContent>
       </Dialog>
 
       {dashboard.isLoading && !dashboard.summary ? (

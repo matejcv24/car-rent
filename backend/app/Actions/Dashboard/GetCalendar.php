@@ -56,7 +56,11 @@ class GetCalendar
                             'id' => $rental->id,
                             'renter' => [
                                 'id' => $rental->renter->id,
+                                'first_name' => $rental->renter->first_name,
+                                'last_name' => $rental->renter->last_name,
                                 'name' => trim("{$rental->renter->first_name} {$rental->renter->last_name}"),
+                                'phone' => $rental->renter->phone,
+                                'email' => $rental->renter->email,
                             ],
                             'start_date' => $rentalStart->toDateString(),
                             'end_date' => $rentalEnd->toDateString(),

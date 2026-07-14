@@ -59,7 +59,11 @@ class DashboardApiTest extends TestCase
             ->assertJsonPath('data.vehicles.0.rentals.0.visible_booking.start_date', '2026-06-16')
             ->assertJsonPath('data.vehicles.0.rentals.0.visible_booking.end_date', '2026-06-17')
             ->assertJsonPath('data.vehicles.0.rentals.0.visible_booking.starts_before_range', true)
-            ->assertJsonPath('data.vehicles.0.rentals.0.return_marker.date', '2026-06-18');
+            ->assertJsonPath('data.vehicles.0.rentals.0.return_marker.date', '2026-06-18')
+            ->assertJsonPath('data.vehicles.0.rentals.0.renter.first_name', 'Aleksandar')
+            ->assertJsonPath('data.vehicles.0.rentals.0.renter.last_name', 'Petrov')
+            ->assertJsonPath('data.vehicles.0.rentals.0.renter.phone', '+38970123456')
+            ->assertJsonPath('data.vehicles.0.rentals.0.renter.email', 'petrov@example.com');
     }
 
     public function test_calendar_rejects_ranges_longer_than_31_days(): void

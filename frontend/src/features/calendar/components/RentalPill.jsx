@@ -44,18 +44,18 @@ function getColorIndex(value) {
   return hash
 }
 
-export default function RentalPill({ rental }) {
+export default function RentalPill({ rental, onRenterClick }) {
   const renterColorKey = rental.renter?.id ?? rental.renter?.name ?? rental.id
   const color = colors[getColorIndex(renterColorKey)]
-  const nameParts = String(rental.renter.name ?? '').trim().split(/\s+/).filter(Boolean)
-  const firstName = nameParts[0] ?? ''
-  const surname = nameParts.slice(1).join(' ')
+  const firstName = String(rental.renter.name ?? '').trim().split(/\s+/).filter(Boolean)[0] ?? ''
 
   return (
     <Box
+      component="button"
+      type="button"
+      onClick={() => onRenterClick?.(rental.renter)}
       sx={{
         display: 'flex',
-        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         gap: 0.5,
@@ -66,16 +66,18 @@ export default function RentalPill({ rental }) {
         bgcolor: color.bg,
         color: color.text,
         textAlign: 'center',
+        border: 0,
+        cursor: 'pointer',
+        font: 'inherit',
+        '&:hover, &:focus-visible': {
+          boxShadow: 'inset 0 0 0 1px currentColor',
+          outline: 'none',
+        },
       }}
     >
       <Typography variant="caption" sx={{ fontWeight: 750, lineHeight: 1.05 }}>
         {firstName || rental.renter.name}
       </Typography>
-      {surname && (
-        <Typography variant="caption" sx={{ fontWeight: 750, lineHeight: 1.05 }}>
-          {surname}
-        </Typography>
-      )}
     </Box>
   )
 }

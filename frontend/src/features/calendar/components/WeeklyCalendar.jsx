@@ -9,7 +9,7 @@ function includesDate(range, date) {
   return range && range.start_date <= date && range.end_date >= date
 }
 
-export default function WeeklyCalendar({ calendar, onPrevious, onToday, onNext }) {
+export default function WeeklyCalendar({ calendar, onPrevious, onToday, onNext, onRenterClick }) {
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState('all')
   const vehicleColumnWidth = 92
   const dateColumnWidth = 62
@@ -92,8 +92,8 @@ export default function WeeklyCalendar({ calendar, onPrevious, onToday, onNext }
               const returns = vehicle.rentals.filter((rental) => rental.return_marker?.date === day.date)
               return (
                 <Box key={day.date} sx={{ display: 'grid', alignContent: 'center', gap: 0.5, p: 0.4, height: rowHeight, borderRight: 1, borderBottom: 1, borderColor: 'divider', bgcolor: day.is_today ? 'rgba(10, 159, 118, 0.035)' : 'transparent' }}>
-                  {returns.map((rental) => <RentalPill key={`return-${rental.id}`} rental={rental} />)}
-                  {bookings.map((rental) => <RentalPill key={rental.id} rental={rental} />)}
+                  {returns.map((rental) => <RentalPill key={`return-${rental.id}`} rental={rental} onRenterClick={onRenterClick} />)}
+                  {bookings.map((rental) => <RentalPill key={rental.id} rental={rental} onRenterClick={onRenterClick} />)}
                 </Box>
               )
             })}
