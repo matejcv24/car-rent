@@ -47,24 +47,35 @@ function getColorIndex(value) {
 export default function RentalPill({ rental }) {
   const renterColorKey = rental.renter?.id ?? rental.renter?.name ?? rental.id
   const color = colors[getColorIndex(renterColorKey)]
+  const nameParts = String(rental.renter.name ?? '').trim().split(/\s+/).filter(Boolean)
+  const firstName = nameParts[0] ?? ''
+  const surname = nameParts.slice(1).join(' ')
 
   return (
     <Box
       sx={{
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 0.5,
         minWidth: 0,
-        px: 1,
-        py: 0.8,
+        px: 0.75,
+        py: 0.55,
         borderRadius: 1.5,
         bgcolor: color.bg,
         color: color.text,
+        textAlign: 'center',
       }}
     >
-      <Typography variant="caption" noWrap sx={{ fontWeight: 750 }}>
-        {rental.renter.name}
+      <Typography variant="caption" sx={{ fontWeight: 750, lineHeight: 1.05 }}>
+        {firstName || rental.renter.name}
       </Typography>
+      {surname && (
+        <Typography variant="caption" sx={{ fontWeight: 750, lineHeight: 1.05 }}>
+          {surname}
+        </Typography>
+      )}
     </Box>
   )
 }

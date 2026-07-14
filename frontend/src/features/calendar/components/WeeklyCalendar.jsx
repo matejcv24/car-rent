@@ -11,8 +11,8 @@ function includesDate(range, date) {
 
 export default function WeeklyCalendar({ calendar, onPrevious, onToday, onNext }) {
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState('all')
-  const vehicleColumnWidth = 116
-  const dateColumnWidth = 86
+  const vehicleColumnWidth = 92
+  const dateColumnWidth = 62
   const calendarColumns = `${vehicleColumnWidth}px repeat(7, ${dateColumnWidth}px)`
   const gridWidth = vehicleColumnWidth + (dateColumnWidth * 7)
   const rowHeight = 76
