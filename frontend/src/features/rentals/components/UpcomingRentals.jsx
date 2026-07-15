@@ -124,6 +124,10 @@ export default function UpcomingRentals({ rentals, onEditRental, onDeleteRental 
     }
 
     if (state.axis === 'y') {
+      event.preventDefault()
+
+      const maxScrollTop = scrollElement.scrollHeight - scrollElement.clientHeight
+      scrollElement.scrollTop = Math.min(Math.max(state.scrollTop + deltaY, 0), maxScrollTop)
       scrollElement.scrollLeft = state.scrollLeft
     }
   }
