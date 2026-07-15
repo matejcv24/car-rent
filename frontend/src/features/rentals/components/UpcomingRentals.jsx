@@ -59,6 +59,30 @@ function PhoneLink({ phone, sx }) {
   )
 }
 
+function RenterName({ renter }) {
+  const firstName = String(renter.first_name ?? '').trim()
+  const lastName = String(renter.last_name ?? '').trim()
+  const fallbackName = String(renter.full_name ?? '').trim()
+
+  if (!firstName && !lastName && fallbackName) {
+    const [fallbackFirstName, ...fallbackLastName] = fallbackName.split(/\s+/)
+
+    return (
+      <Box sx={{ display: 'grid', justifyItems: 'center', lineHeight: 1.2 }}>
+        <Box component="span">{fallbackFirstName}</Box>
+        {fallbackLastName.length > 0 && <Box component="span">{fallbackLastName.join(' ')}</Box>}
+      </Box>
+    )
+  }
+
+  return (
+    <Box sx={{ display: 'grid', justifyItems: 'center', lineHeight: 1.2 }}>
+      {firstName && <Box component="span">{firstName}</Box>}
+      {lastName && <Box component="span">{lastName}</Box>}
+    </Box>
+  )
+}
+
 export default function UpcomingRentals({ rentals, onEditRental, onDeleteRental }) {
   return (
     <Box component="section" sx={{ mt: 1.5 }}>
@@ -67,11 +91,22 @@ export default function UpcomingRentals({ rentals, onEditRental, onDeleteRental 
         <Typography variant="h2">Rentals</Typography>
       </Box>
 
-      <TableContainer component={Paper} variant="outlined" sx={{ boxShadow: 'none', overflow: 'auto', maxHeight: 320 }}>
+      <TableContainer
+        component={Paper}
+        variant="outlined"
+        sx={{
+          boxShadow: 'none',
+          maxHeight: 320,
+          maxWidth: '100%',
+          overflow: 'auto',
+          overscrollBehavior: 'contain',
+          WebkitOverflowScrolling: 'touch',
+        }}
+      >
         <Table size="small" stickyHeader sx={{ minWidth: 720 }}>
           <TableHead>
             <TableRow>
-              <TableCell>Vehicle</TableCell><TableCell>Renter</TableCell><TableCell align="center">From</TableCell>
+              <TableCell>Vehicle</TableCell><TableCell align="center">Renter</TableCell><TableCell align="center">From</TableCell>
               <TableCell align="center">To</TableCell><TableCell align="center">Contact</TableCell><TableCell align="center">Paid</TableCell><TableCell align="center">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -82,7 +117,9 @@ export default function UpcomingRentals({ rentals, onEditRental, onDeleteRental 
                   <Typography variant="body2" sx={{ fontWeight: 700 }}>{rental.vehicle.model}</Typography>
                   <Typography variant="caption" color="text.secondary">{rental.vehicle.license_plate}</Typography>
                 </TableCell>
-                <TableCell sx={{ fontWeight: 700 }}>{rental.renter.full_name}</TableCell>
+                <TableCell align="center" sx={{ fontWeight: 700 }}>
+                  <RenterName renter={rental.renter} />
+                </TableCell>
                 <TableCell align="center">{formatShortDate(rental.start_date)}</TableCell>
                 <TableCell align="center">{formatShortDate(rental.end_date)}</TableCell>
                 <TableCell align="center">

@@ -46,7 +46,7 @@ export default function WeeklyCalendar({ calendar, onPrevious, onToday, onNext, 
         </Box>
       </Box>
 
-      <Box sx={{ width: '100%', overflowX: 'auto', overflowY: 'visible' }}>
+      <Box sx={{ width: '100%', maxWidth: '100%', overflowX: 'auto', overflowY: 'hidden', overscrollBehaviorX: 'contain', WebkitOverflowScrolling: 'touch' }}>
         <Box sx={{ display: 'grid', gridTemplateColumns: calendarColumns, bgcolor: '#f7f9f8', width: gridWidth, position: 'sticky', top: 0, zIndex: 4 }}>
           <Box sx={{ px: 0.8, py: 1, minHeight: headerHeight, borderRight: 1, borderBottom: 1, borderColor: 'divider', position: 'sticky', left: 0, zIndex: 5, bgcolor: '#f7f9f8' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
