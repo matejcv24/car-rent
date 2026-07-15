@@ -18,6 +18,11 @@ function formatDateDisplay(value) {
   return `${day}/${month}/${year}`
 }
 
+function getPhoneHref(phone) {
+  const normalizedPhone = String(phone ?? '').replace(/[^\d+]/g, '')
+  return normalizedPhone ? `tel:${normalizedPhone}` : undefined
+}
+
 export default function DashboardPage() {
   const dashboard = useDashboardData()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -134,7 +139,7 @@ export default function DashboardPage() {
     setIsLoadingVehicles(true)
 
     try {
-      const response = await api.get('/vehicles', { params: { limit: 100 } })
+      const response = await api.get('/vehicles', { params: { limit: 100, status: 'active' } })
       setVehicles(response.data.data ?? [])
     } catch (error) {
       setVehiclesError(getApiMessage(error, 'Failed to load vehicles. Please try again.'))
@@ -562,15 +567,29 @@ export default function DashboardPage() {
           {selectedRenter && (
             <Stack spacing={1.5}>
               <Box>
-                <Typography variant="caption" color="text.secondary">Name and surname</Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Name and surname:</Typography>
                 <Typography sx={{ fontWeight: 800 }}>
                   {[selectedRenter.first_name, selectedRenter.last_name].filter(Boolean).join(' ') || selectedRenter.name}
                 </Typography>
               </Box>
               {selectedRenter.phone && (
                 <Box>
-                  <Typography variant="caption" color="text.secondary">Mobile phone</Typography>
-                  <Typography sx={{ fontWeight: 700 }}>{selectedRenter.phone}</Typography>
+                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>Mobile phone:</Typography>
+                  <Typography
+                    component="a"
+                    href={getPhoneHref(selectedRenter.phone)}
+                    sx={{
+                      color: '#00008B',
+                      display: 'inline-block',
+                      fontWeight: 700,
+                      textDecoration: 'none',
+                      '&:hover': {
+                        textDecoration: 'underline',
+                      },
+                    }}
+                  >
+                    {selectedRenter.phone}
+                  </Typography>
                 </Box>
               )}
               {selectedRenter.email && (

@@ -26,13 +26,14 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { DateCalendar } from '@mui/x-date-pickers/DateCalendar'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import dayjs from 'dayjs'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import api, { getApiErrors, getApiMessage } from '../../../config/api.js'
 
 const initialVehicleForm = {
   licensePlate: '',
   model: '',
   type: 'car',
+  status: 'active',
   registrationStartDate: '',
   registrationExpiryDate: '',
 }
@@ -177,24 +178,26 @@ export default function VehiclesPage() {
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true)
   const [vehiclesError, setVehiclesError] = useState('')
   const [selectedVehicleId, setSelectedVehicleId] = useState(null)
+  const [vehicleStatusFilter, setVehicleStatusFilter] = useState('active')
 
-  const fetchVehicles = async () => {
+  const fetchVehicles = useCallback(async () => {
     setVehiclesError('')
     setIsLoadingVehicles(true)
 
     try {
-      const response = await api.get('/vehicles', { params: { limit: 100 } })
+      const response = await api.get('/vehicles', { params: { limit: 100, status: vehicleStatusFilter } })
       setVehicles(response.data.data ?? [])
     } catch (error) {
       setVehiclesError(getApiMessage(error, 'Failed to load vehicles. Please try again.'))
     } finally {
       setIsLoadingVehicles(false)
     }
-  }
+  }, [vehicleStatusFilter])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchVehicles()
-  }, [])
+  }, [fetchVehicles])
 
   const updateField = (field, value) => {
     setVehicleForm((prev) => ({ ...prev, [field]: value }))
@@ -240,6 +243,7 @@ export default function VehiclesPage() {
       type: vehicle.type ?? 'car',
       registrationStartDate: vehicle.registration?.start_date ?? '',
       registrationExpiryDate: vehicle.registration?.expiry_date ?? '',
+      status: vehicle.status ?? 'active',
     })
     setSaveError('')
     setFieldErrors({})
@@ -367,7 +371,10 @@ export default function VehiclesPage() {
       }
 
       if (editingVehicle) {
-        await api.put(`/vehicles/${editingVehicle.id}`, vehiclePayload)
+        await api.put(`/vehicles/${editingVehicle.id}`, {
+          ...vehiclePayload,
+          status: vehicleForm.status,
+        })
 
         const registrationChanged =
           editingVehicle.registration?.registration_number !== registrationPayload.registration_number ||
@@ -398,6 +405,7 @@ export default function VehiclesPage() {
         licensePlate: errors.license_plate?.[0] ?? errors['registration.registration_number']?.[0] ?? errors.registration_number?.[0],
         model: errors.model?.[0],
         type: errors.type?.[0],
+        status: errors.status?.[0],
         registrationStartDate: errors['registration.start_date']?.[0] ?? errors.start_date?.[0],
         registrationExpiryDate: errors['registration.expiry_date']?.[0] ?? errors.expiry_date?.[0],
       })
@@ -564,7 +572,7 @@ export default function VehiclesPage() {
 
   return (
     <Box>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 1.5, mb: 2, flexDirection: { xs: 'column', sm: 'row' }, alignItems: { xs: 'stretch', sm: 'center' } }}>
         <Button
           variant="contained"
           startIcon={<AddRoundedIcon />}
@@ -574,6 +582,18 @@ export default function VehiclesPage() {
         >
           Add vehicle
         </Button>
+        <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 180 } }}>
+          <InputLabel id="vehicle-status-filter-label">Status</InputLabel>
+          <Select
+            labelId="vehicle-status-filter-label"
+            label="Status"
+            value={vehicleStatusFilter}
+            onChange={(event) => setVehicleStatusFilter(event.target.value)}
+          >
+            <MenuItem value="active">Active</MenuItem>
+            <MenuItem value="retired">Inactive</MenuItem>
+          </Select>
+        </FormControl>
       </Box>
       {vehiclesError && (
         <Alert severity="error" action={<Button color="inherit" size="small" onClick={fetchVehicles}>Retry</Button>} sx={{ mb: 2 }}>
@@ -672,6 +692,20 @@ export default function VehiclesPage() {
                   <MenuItem value="van">Van</MenuItem>
                 </Select>
               </FormControl>
+              {editingVehicle && (
+                <FormControl fullWidth required error={Boolean(fieldErrors.status)} disabled={isSaving}>
+                  <InputLabel id="vehicle-status-label">Status</InputLabel>
+                  <Select
+                    labelId="vehicle-status-label"
+                    label="Status"
+                    value={vehicleForm.status}
+                    onChange={(event) => updateField('status', event.target.value)}
+                  >
+                    <MenuItem value="active">Active</MenuItem>
+                    <MenuItem value="retired">Inactive</MenuItem>
+                  </Select>
+                </FormControl>
+              )}
             </Stack>
 
             <Stack spacing={2}>

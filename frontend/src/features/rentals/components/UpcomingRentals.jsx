@@ -32,9 +32,34 @@ function PaymentChip({ status }) {
   )
 }
 
-export default function UpcomingRentals({ rentals, onEditRental, onDeleteRental }) {
-  const visibleRentals = rentals.slice(0, 4)
+function getPhoneHref(phone) {
+  const normalizedPhone = String(phone ?? '').replace(/[^\d+]/g, '')
+  return normalizedPhone ? `tel:${normalizedPhone}` : undefined
+}
 
+function PhoneLink({ phone, sx }) {
+  return (
+    <Typography
+      component="a"
+      href={getPhoneHref(phone)}
+      variant="body2"
+      sx={{
+        color: '#00008B',
+        display: 'inline-block',
+        fontWeight: 700,
+        textDecoration: 'none',
+        '&:hover': {
+          textDecoration: 'underline',
+        },
+        ...sx,
+      }}
+    >
+      {phone}
+    </Typography>
+  )
+}
+
+export default function UpcomingRentals({ rentals, onEditRental, onDeleteRental }) {
   return (
     <Box component="section" sx={{ mt: 1.5 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -42,7 +67,7 @@ export default function UpcomingRentals({ rentals, onEditRental, onDeleteRental 
         <Typography variant="h2">Rentals</Typography>
       </Box>
 
-      <TableContainer component={Paper} variant="outlined" sx={{ boxShadow: 'none', overflow: 'auto', maxHeight: 360 }}>
+      <TableContainer component={Paper} variant="outlined" sx={{ boxShadow: 'none', overflow: 'auto', maxHeight: 320 }}>
         <Table size="small" stickyHeader sx={{ minWidth: 720 }}>
           <TableHead>
             <TableRow>
@@ -51,7 +76,7 @@ export default function UpcomingRentals({ rentals, onEditRental, onDeleteRental 
             </TableRow>
           </TableHead>
           <TableBody>
-            {visibleRentals.map((rental) => (
+            {rentals.map((rental) => (
               <TableRow key={rental.id} hover>
                 <TableCell>
                   <Typography variant="body2" sx={{ fontWeight: 700 }}>{rental.vehicle.model}</Typography>
@@ -61,7 +86,7 @@ export default function UpcomingRentals({ rentals, onEditRental, onDeleteRental 
                 <TableCell align="center">{formatShortDate(rental.start_date)}</TableCell>
                 <TableCell align="center">{formatShortDate(rental.end_date)}</TableCell>
                 <TableCell align="center">
-                  <Typography variant="body2">{rental.renter.phone}</Typography>
+                  <PhoneLink phone={rental.renter.phone} />
                   <Typography variant="caption" color="text.secondary">{rental.renter.email}</Typography>
                 </TableCell>
                 <TableCell align="center">
@@ -88,7 +113,7 @@ export default function UpcomingRentals({ rentals, onEditRental, onDeleteRental 
       </TableContainer>
 
       <Stack spacing={1.25} sx={{ display: 'none' }}>
-        {visibleRentals.map((rental) => (
+        {rentals.map((rental) => (
           <Card key={rental.id} sx={{ boxShadow: 'none' }}>
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1 }}>
@@ -111,7 +136,7 @@ export default function UpcomingRentals({ rentals, onEditRental, onDeleteRental 
                 <Box><Typography variant="caption" color="text.secondary">From</Typography><Typography variant="body2" sx={{ fontWeight: 700 }}>{formatShortDate(rental.start_date)}</Typography></Box>
                 <Box><Typography variant="caption" color="text.secondary">To</Typography><Typography variant="body2" sx={{ fontWeight: 700 }}>{formatShortDate(rental.end_date)}</Typography></Box>
               </Box>
-              <Typography variant="body2" sx={{ mt: 1.5 }}>{rental.renter.phone}</Typography>
+              <PhoneLink phone={rental.renter.phone} sx={{ mt: 1.5 }} />
               <Typography variant="caption" color="text.secondary">{rental.renter.email}</Typography>
             </CardContent>
           </Card>

@@ -6,6 +6,7 @@ use App\Models\Rental;
 use App\Models\Renter;
 use App\Models\User;
 use App\Models\Vehicle;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -147,6 +148,29 @@ class DashboardApiTest extends TestCase
             ->assertJsonCount(2, 'data.upcoming_rentals')
             ->assertJsonPath('data.upcoming_rentals.0.id', $rental->id)
             ->assertJsonPath('data.upcoming_rentals.1.id', $futureRental->id);
+    }
+
+    public function test_summary_returns_all_active_and_upcoming_rentals(): void
+    {
+        $this->travelTo('2026-06-16 12:00:00');
+        $this->actingAs(User::factory()->create(), 'sanctum');
+        $vehicle = $this->createVehicle();
+        $renter = $this->createRenter();
+
+        for ($i = 0; $i < 7; $i++) {
+            Rental::create([
+                'vehicle_id' => $vehicle->id,
+                'renter_id' => $renter->id,
+                'start_date' => CarbonImmutable::parse('2026-06-16')->addDays($i)->toDateString(),
+                'end_date' => CarbonImmutable::parse('2026-06-17')->addDays($i)->toDateString(),
+                'status' => $i === 0 ? 'active' : 'pending',
+                'total_price' => 300,
+            ]);
+        }
+
+        $this->getJson('/api/v1/dashboard/summary')
+            ->assertOk()
+            ->assertJsonCount(7, 'data.upcoming_rentals');
     }
 
     private function createVehicle(): Vehicle

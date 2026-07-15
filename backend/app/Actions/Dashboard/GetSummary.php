@@ -23,7 +23,6 @@ class GetSummary
             ->whereDate('end_date', '>=', $today)
             ->orderBy('start_date')
             ->orderBy('id')
-            ->limit(4)
             ->get();
 
         return [
