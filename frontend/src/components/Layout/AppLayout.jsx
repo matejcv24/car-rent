@@ -30,11 +30,24 @@ export default function AppLayout() {
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
   const [vehicleCount, setVehicleCount] = useState(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   useEffect(() => {
     api.get('/dashboard/summary')
       .then((response) => setVehicleCount(response.data.data.vehicles.total))
       .catch(() => setVehicleCount(null))
+  }, [])
+
+  useEffect(() => {
+    const updateModalState = () => {
+      setIsModalOpen(Boolean(document.querySelector('.MuiModal-root')))
+    }
+
+    const observer = new MutationObserver(updateModalState)
+    observer.observe(document.body, { childList: true, subtree: true })
+    updateModalState()
+
+    return () => observer.disconnect()
   }, [])
 
   const activePath = location.pathname.startsWith('/vehicles') ? '/vehicles' : '/'
@@ -89,7 +102,7 @@ export default function AppLayout() {
           width: '100%',
           flex: 1,
           minHeight: 0,
-          overflowY: 'auto',
+          overflowY: isModalOpen ? 'hidden' : 'auto',
         }}
       >
         <Outlet />

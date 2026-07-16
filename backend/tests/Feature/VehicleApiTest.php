@@ -126,7 +126,7 @@ class VehicleApiTest extends TestCase
             ->assertJsonCount(1, 'data.services');
     }
 
-    public function test_vehicle_with_rental_history_cannot_be_deleted(): void
+    public function test_active_vehicle_with_rental_history_cannot_be_deleted(): void
     {
         $this->actingAs(User::factory()->create(), 'sanctum');
         $vehicle = Vehicle::create([
@@ -152,5 +152,107 @@ class VehicleApiTest extends TestCase
         $this->deleteJson("/api/v1/vehicles/{$vehicle->id}")
             ->assertConflict()
             ->assertJsonPath('success', false);
+    }
+
+    public function test_inactive_vehicle_with_rental_history_can_be_deleted(): void
+    {
+        $this->actingAs(User::factory()->create(), 'sanctum');
+        $vehicle = Vehicle::create([
+            'license_plate' => 'SK-3344-IJ',
+            'model' => 'Ford Transit',
+            'type' => 'van',
+            'status' => 'retired',
+        ]);
+        $renter = Renter::create([
+            'first_name' => 'Bojan',
+            'last_name' => 'Stojkov',
+            'phone' => '+38970111222',
+            'email' => 'bojan@example.com',
+        ]);
+        $rental = Rental::create([
+            'vehicle_id' => $vehicle->id,
+            'renter_id' => $renter->id,
+            'start_date' => '2026-06-01',
+            'end_date' => '2026-06-05',
+            'status' => 'completed',
+            'total_price' => 250,
+        ]);
+
+        $this->deleteJson("/api/v1/vehicles/{$vehicle->id}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('vehicles', ['id' => $vehicle->id]);
+        $this->assertDatabaseMissing('rentals', ['id' => $rental->id]);
+    }
+
+    public function test_vehicle_cannot_be_marked_inactive_with_active_or_upcoming_rentals(): void
+    {
+        $this->travelTo('2026-06-21 12:00:00');
+        $this->actingAs(User::factory()->create(), 'sanctum');
+        $vehicle = Vehicle::create([
+            'license_plate' => 'SK-4455-KL',
+            'model' => 'Toyota Yaris',
+            'type' => 'car',
+        ]);
+        $renter = Renter::create([
+            'first_name' => 'Ana',
+            'last_name' => 'Petrova',
+            'phone' => '+38970111223',
+            'email' => 'ana@example.com',
+        ]);
+        Rental::create([
+            'vehicle_id' => $vehicle->id,
+            'renter_id' => $renter->id,
+            'start_date' => '2026-06-23',
+            'end_date' => '2026-06-25',
+            'status' => 'pending',
+            'total_price' => 250,
+        ]);
+
+        $this->putJson("/api/v1/vehicles/{$vehicle->id}", ['status' => 'retired'])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.status.0', 'Cannot change the status of the vehicle to inactive beacuse it has active/upcoming rental');
+
+        $this->assertDatabaseHas('vehicles', [
+            'id' => $vehicle->id,
+            'status' => 'active',
+        ]);
+    }
+
+    public function test_vehicle_can_be_marked_inactive_when_rentals_are_past_or_cancelled(): void
+    {
+        $this->travelTo('2026-06-21 12:00:00');
+        $this->actingAs(User::factory()->create(), 'sanctum');
+        $vehicle = Vehicle::create([
+            'license_plate' => 'SK-5566-MN',
+            'model' => 'Toyota Corolla',
+            'type' => 'car',
+        ]);
+        $renter = Renter::create([
+            'first_name' => 'Ana',
+            'last_name' => 'Petrova',
+            'phone' => '+38970111223',
+            'email' => 'ana@example.com',
+        ]);
+        Rental::create([
+            'vehicle_id' => $vehicle->id,
+            'renter_id' => $renter->id,
+            'start_date' => '2026-06-10',
+            'end_date' => '2026-06-12',
+            'status' => 'completed',
+            'total_price' => 250,
+        ]);
+        Rental::create([
+            'vehicle_id' => $vehicle->id,
+            'renter_id' => $renter->id,
+            'start_date' => '2026-06-23',
+            'end_date' => '2026-06-25',
+            'status' => 'cancelled',
+            'total_price' => 250,
+        ]);
+
+        $this->putJson("/api/v1/vehicles/{$vehicle->id}", ['status' => 'retired'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'retired');
     }
 }

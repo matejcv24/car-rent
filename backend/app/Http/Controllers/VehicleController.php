@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
 
 class VehicleController extends Controller
 {
@@ -58,7 +59,22 @@ class VehicleController extends Controller
 
     public function update(UpdateVehicleRequest $request, Vehicle $vehicle): VehicleResource
     {
-        $vehicle->update($request->validated());
+        $data = $request->validated();
+
+        if (($data['status'] ?? null) === 'retired' && $vehicle->status !== 'retired') {
+            $hasCurrentOrUpcomingRentals = $vehicle->rentals()
+                ->where('status', '!=', 'cancelled')
+                ->whereDate('end_date', '>=', today())
+                ->exists();
+
+            if ($hasCurrentOrUpcomingRentals) {
+                throw ValidationException::withMessages([
+                    'status' => ['Cannot change the status of the vehicle to inactive beacuse it has active/upcoming rental'],
+                ]);
+            }
+        }
+
+        $vehicle->update($data);
 
         return (new VehicleResource($this->loadCardData($vehicle)))
             ->additional(['success' => true]);
@@ -66,10 +82,10 @@ class VehicleController extends Controller
 
     public function destroy(Vehicle $vehicle): Response|JsonResponse
     {
-        if ($vehicle->rentals()->exists()) {
+        if ($vehicle->status !== 'retired' && $vehicle->rentals()->exists()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Vehicles with rental history cannot be deleted.',
+                'message' => 'Active vehicles with rental history cannot be deleted.',
             ], 409);
         }
 

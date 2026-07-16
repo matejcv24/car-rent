@@ -157,6 +157,7 @@ function VehicleSection({ title, icon, vehicles, selectedVehicleId, onSelectVehi
 export default function VehiclesPage() {
   const [isAddVehicleOpen, setIsAddVehicleOpen] = useState(false)
   const [editingVehicle, setEditingVehicle] = useState(null)
+  const [vehiclePendingDelete, setVehiclePendingDelete] = useState(null)
   const [historyVehicle, setHistoryVehicle] = useState(null)
   const [historyRentals, setHistoryRentals] = useState([])
   const [selectedRental, setSelectedRental] = useState(null)
@@ -167,9 +168,11 @@ export default function VehiclesPage() {
   const [datePickerField, setDatePickerField] = useState('registrationStartDate')
   const [datePickerValue, setDatePickerValue] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [isVehicleDeleting, setIsVehicleDeleting] = useState(false)
   const [isRentalSaving, setIsRentalSaving] = useState(false)
   const [isRentalDeleting, setIsRentalDeleting] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [vehicleDeleteError, setVehicleDeleteError] = useState('')
   const [rentalSaveError, setRentalSaveError] = useState('')
   const [rentalDeleteError, setRentalDeleteError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
@@ -218,7 +221,7 @@ export default function VehiclesPage() {
   }
 
   const closeAddVehicle = () => {
-    if (isSaving) return
+    if (isSaving || isVehicleDeleting) return
     blurActiveElement()
     setIsAddVehicleOpen(false)
   }
@@ -250,6 +253,20 @@ export default function VehiclesPage() {
     setSaveError('')
     setFieldErrors({})
     setIsAddVehicleOpen(true)
+  }
+
+  const openVehicleDeleteDialog = () => {
+    if (!editingVehicle) return
+    blurActiveElement()
+    setVehiclePendingDelete(editingVehicle)
+    setVehicleDeleteError('')
+  }
+
+  const closeVehicleDeleteDialog = () => {
+    if (isVehicleDeleting) return
+    blurActiveElement()
+    setVehiclePendingDelete(null)
+    setVehicleDeleteError('')
   }
 
   const openHistory = async (vehicle) => {
@@ -341,6 +358,7 @@ export default function VehiclesPage() {
       vehicleForm.licensePlate.trim() &&
       vehicleForm.type,
   )
+  const canDeleteVehicle = editingVehicle?.status === 'retired'
 
   const canSaveRental = Boolean(
     rentalForm.vehicle &&
@@ -410,9 +428,32 @@ export default function VehiclesPage() {
         registrationStartDate: errors['registration.start_date']?.[0] ?? errors.start_date?.[0],
         registrationExpiryDate: errors['registration.expiry_date']?.[0] ?? errors.expiry_date?.[0],
       })
-      setSaveError(getApiMessage(error, 'Failed to save vehicle. Please try again.'))
+      setSaveError(error.response?.status === 422 ? '' : getApiMessage(error, 'Failed to save vehicle. Please try again.'))
     } finally {
       setIsSaving(false)
+    }
+  }
+
+  const handleDeleteVehicle = async () => {
+    if (!vehiclePendingDelete) {
+      return
+    }
+
+    setVehicleDeleteError('')
+    setIsVehicleDeleting(true)
+
+    try {
+      await api.delete(`/vehicles/${vehiclePendingDelete.id}`)
+      setVehiclePendingDelete(null)
+      setEditingVehicle(null)
+      setIsAddVehicleOpen(false)
+      setSelectedVehicleId((current) => (current === vehiclePendingDelete.id ? null : current))
+      resetVehicleForm()
+      fetchVehicles()
+    } catch (error) {
+      setVehicleDeleteError(getApiMessage(error, 'Failed to delete vehicle. Please try again.'))
+    } finally {
+      setIsVehicleDeleting(false)
     }
   }
 
@@ -488,7 +529,7 @@ export default function VehiclesPage() {
 
   const handleCloseVehicleModal = () => {
     closeAddVehicle()
-    if (!isSaving) {
+    if (!isSaving && !isVehicleDeleting) {
       setEditingVehicle(null)
       resetVehicleForm()
     }
@@ -645,7 +686,7 @@ export default function VehiclesPage() {
       >
         <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
           {editingVehicle ? 'Edit vehicle' : 'Add vehicle'}
-          <IconButton onClick={handleCloseVehicleModal} size="small" aria-label="Close vehicle modal" disabled={isSaving}>
+          <IconButton onClick={handleCloseVehicleModal} size="small" aria-label="Close vehicle modal" disabled={isSaving || isVehicleDeleting}>
             <CloseRoundedIcon />
           </IconButton>
         </DialogTitle>
@@ -705,6 +746,11 @@ export default function VehiclesPage() {
                     <MenuItem value="active">Active</MenuItem>
                     <MenuItem value="retired">Inactive</MenuItem>
                   </Select>
+                  {fieldErrors.status && (
+                    <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.75 }}>
+                      {fieldErrors.status}
+                    </Typography>
+                  )}
                 </FormControl>
               )}
             </Stack>
@@ -786,12 +832,44 @@ export default function VehiclesPage() {
             </Stack>
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button onClick={handleCloseVehicleModal} variant="outlined" disabled={isSaving} sx={{ flex: 1 }}>
+        <DialogActions sx={{ display: 'grid', gridTemplateColumns: canDeleteVehicle ? '1fr 1fr 1fr' : '1fr 1fr', gap: 1, p: 2 }}>
+          <Button onClick={handleCloseVehicleModal} variant="outlined" disabled={isSaving || isVehicleDeleting} sx={{ minWidth: 0 }}>
             Cancel
           </Button>
-          <Button onClick={handleSaveVehicle} variant="contained" disabled={isSaving || !canSaveVehicle} sx={{ flex: 1, color: 'common.white' }}>
+          {canDeleteVehicle && (
+            <Button onClick={openVehicleDeleteDialog} variant="contained" color="error" disabled={isSaving || isVehicleDeleting} sx={{ minWidth: 0, color: 'common.white' }}>
+              Delete vehicle
+            </Button>
+          )}
+          <Button onClick={handleSaveVehicle} variant="contained" disabled={isSaving || isVehicleDeleting || !canSaveVehicle} sx={{ minWidth: 0, color: 'common.white' }}>
             {isSaving ? 'Saving...' : editingVehicle ? 'Save changes' : 'Save vehicle'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={Boolean(vehiclePendingDelete)} onClose={closeVehicleDeleteDialog} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+          Delete vehicle
+          <IconButton onClick={closeVehicleDeleteDialog} size="small" disabled={isVehicleDeleting} aria-label="Close delete vehicle dialog">
+            <CloseRoundedIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {vehicleDeleteError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {vehicleDeleteError}
+            </Alert>
+          )}
+          <Typography sx={{ fontWeight: 700 }}>
+            Are you sure that you want to delete this vehicle?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, p: 2 }}>
+          <Button onClick={handleDeleteVehicle} variant="contained" color="error" disabled={isVehicleDeleting} sx={{ color: 'common.white' }}>
+            {isVehicleDeleting ? 'Deleting...' : 'Yes'}
+          </Button>
+          <Button onClick={closeVehicleDeleteDialog} variant="outlined" disabled={isVehicleDeleting} sx={{ borderColor: '#0096FF', color: '#0096FF' }}>
+            No
           </Button>
         </DialogActions>
       </Dialog>
