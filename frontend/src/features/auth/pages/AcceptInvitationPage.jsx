@@ -33,7 +33,7 @@ export default function AcceptInvitationPage() {
   }
 
   return (
-    <AuthFrame title="Set your password" subtitle="Finish setting up your FleetTrack account.">
+    <AuthFrame title="Set your password" subtitle="Finish setting up your AUTO MILANO account.">
       <Box component="form" onSubmit={submit} noValidate sx={{ display: 'grid', gap: 2 }}>
         {!invitationToken && <Alert severity="error">This invitation link is incomplete.</Alert>}
         {message && <Alert severity="error">{message}</Alert>}

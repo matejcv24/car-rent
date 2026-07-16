@@ -88,64 +88,75 @@ export default function UpcomingRentals({ rentals, onEditRental, onDeleteRental 
           boxShadow: 'none',
           maxHeight: 320,
           maxWidth: '100%',
-          overflow: 'auto',
-          overscrollBehavior: 'contain',
-          touchAction: 'pan-x pan-y',
+          overflowX: 'hidden',
+          overflowY: 'auto',
+          overscrollBehaviorY: 'contain',
+          touchAction: 'pan-y',
           WebkitOverflowScrolling: 'touch',
         }}
       >
-        <Table size="small" stickyHeader sx={{ minWidth: 820 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell>Vehicle</TableCell><TableCell align="center">Renter</TableCell><TableCell align="center">From</TableCell>
-              <TableCell align="center">To</TableCell><TableCell align="center">Contact</TableCell><TableCell align="center">Paid</TableCell><TableCell align="center">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rentals.map((rental) => (
-              <TableRow
-                key={rental.id}
-                sx={{
-                  '& .MuiTableCell-root': {
-                    borderBottomColor: 'rgba(0, 0, 0, 0.16)',
-                    borderBottomWidth: 1,
-                  },
-                }}
-              >
-                <TableCell>
-                  <Typography variant="body2" sx={{ fontWeight: 700 }}>{rental.vehicle.model}</Typography>
-                  <Typography variant="caption" color="text.secondary">{rental.vehicle.license_plate}</Typography>
-                </TableCell>
-                <TableCell align="center" sx={{ fontWeight: 700 }}>
-                  <RenterName renter={rental.renter} />
-                </TableCell>
-                <TableCell align="center">{formatShortDate(rental.start_date)}</TableCell>
-                <TableCell align="center">{formatShortDate(rental.end_date)}</TableCell>
-                <TableCell align="center">
-                  <PhoneLink phone={rental.renter.phone} />
-                  <Typography variant="caption" color="text.secondary">{rental.renter.email}</Typography>
-                </TableCell>
-                <TableCell align="center">
-                  <PaymentChip status={rental.payment_status} />
-                </TableCell>
-                <TableCell align="center">
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                    <Tooltip title="Edit rental">
-                      <IconButton size="small" aria-label={`Edit rental for ${rental.renter.full_name}`} onClick={() => onEditRental(rental)} sx={{ width: 28, height: 28, color: '#0096FF' }}>
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete rental">
-                      <IconButton size="small" color="error" aria-label={`Delete rental for ${rental.renter.full_name}`} onClick={() => onDeleteRental(rental)} sx={{ width: 28, height: 28 }}>
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </Box>
-                </TableCell>
+        <Box
+          sx={{
+            maxWidth: '100%',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            overscrollBehaviorX: 'contain',
+            WebkitOverflowScrolling: 'touch',
+          }}
+        >
+          <Table size="small" stickyHeader sx={{ minWidth: 820 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>Vehicle</TableCell><TableCell align="center">Renter</TableCell><TableCell align="center">From</TableCell>
+                <TableCell align="center">To</TableCell><TableCell align="center">Contact</TableCell><TableCell align="center">Paid</TableCell><TableCell align="center">Actions</TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {rentals.map((rental) => (
+                <TableRow
+                  key={rental.id}
+                  sx={{
+                    '& .MuiTableCell-root': {
+                      borderBottomColor: 'rgba(0, 0, 0, 0.16)',
+                      borderBottomWidth: 1,
+                    },
+                  }}
+                >
+                  <TableCell>
+                    <Typography variant="body2" sx={{ fontWeight: 700 }}>{rental.vehicle.model}</Typography>
+                    <Typography variant="caption" color="text.secondary">{rental.vehicle.license_plate}</Typography>
+                  </TableCell>
+                  <TableCell align="center" sx={{ fontWeight: 700 }}>
+                    <RenterName renter={rental.renter} />
+                  </TableCell>
+                  <TableCell align="center">{formatShortDate(rental.start_date)}</TableCell>
+                  <TableCell align="center">{formatShortDate(rental.end_date)}</TableCell>
+                  <TableCell align="center">
+                    <PhoneLink phone={rental.renter.phone} />
+                    <Typography variant="caption" color="text.secondary">{rental.renter.email}</Typography>
+                  </TableCell>
+                  <TableCell align="center">
+                    <PaymentChip status={rental.payment_status} />
+                  </TableCell>
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                      <Tooltip title="Edit rental">
+                        <IconButton size="small" aria-label={`Edit rental for ${rental.renter.full_name}`} onClick={() => onEditRental(rental)} sx={{ width: 28, height: 28, color: '#0096FF' }}>
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Delete rental">
+                        <IconButton size="small" color="error" aria-label={`Delete rental for ${rental.renter.full_name}`} onClick={() => onDeleteRental(rental)} sx={{ width: 28, height: 28 }}>
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
       </TableContainer>
 
       <Stack spacing={1.25} sx={{ display: 'none' }}>
