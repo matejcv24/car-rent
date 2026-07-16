@@ -81,30 +81,29 @@ export default function UpcomingRentals({ rentals, onEditRental, onDeleteRental 
         <Typography variant="h2">Rentals</Typography>
       </Box>
 
-      <TableContainer
-        component={Paper}
-        variant="outlined"
+      <Box
         sx={{
-          boxShadow: 'none',
-          maxHeight: 320,
           maxWidth: '100%',
-          overflowX: 'hidden',
-          overflowY: 'auto',
-          overscrollBehaviorY: 'contain',
-          touchAction: 'pan-y',
+          overflowX: 'auto',
+          overflowY: 'hidden',
+          overscrollBehaviorX: 'contain',
           WebkitOverflowScrolling: 'touch',
         }}
       >
-        <Box
+        <TableContainer
+          component={Paper}
+          variant="outlined"
           sx={{
-            maxWidth: '100%',
-            overflowX: 'auto',
-            overflowY: 'hidden',
-            overscrollBehaviorX: 'contain',
+            boxShadow: 'none',
+            maxHeight: 320,
+            minWidth: 820,
+            overflowX: 'hidden',
+            overflowY: 'auto',
+            overscrollBehaviorY: 'contain',
             WebkitOverflowScrolling: 'touch',
           }}
         >
-          <Table size="small" stickyHeader sx={{ minWidth: 820 }}>
+          <Table size="small" stickyHeader>
             <TableHead>
               <TableRow>
                 <TableCell>Vehicle</TableCell><TableCell align="center">Renter</TableCell><TableCell align="center">From</TableCell>
@@ -156,8 +155,8 @@ export default function UpcomingRentals({ rentals, onEditRental, onDeleteRental 
               ))}
             </TableBody>
           </Table>
-        </Box>
-      </TableContainer>
+        </TableContainer>
+      </Box>
 
       <Stack spacing={1.25} sx={{ display: 'none' }}>
         {rentals.map((rental) => (

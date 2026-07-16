@@ -30,11 +30,11 @@ export default function Brand({ compact = false }) {
             whiteSpace: 'nowrap',
           }}
         >
-          <Box component="span" sx={{ color: '#009b62', WebkitTextStroke: '0.45px #ffffff' }}>
+          <Box component="span" sx={{ color: '#009b62' }}>
             AUTO
           </Box>
           {' '}
-          <Box component="span" sx={{ color: '#d81f2a', WebkitTextStroke: '0.45px #ffffff' }}>
+          <Box component="span" sx={{ color: '#d81f2a' }}>
             MILANO
           </Box>
         </Typography>
