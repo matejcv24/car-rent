@@ -181,7 +181,15 @@ export default function UpcomingRentals({ rentals, onEditRental, onDeleteRental 
           </TableHead>
           <TableBody>
             {rentals.map((rental) => (
-              <TableRow key={rental.id}>
+              <TableRow
+                key={rental.id}
+                sx={{
+                  '& .MuiTableCell-root': {
+                    borderBottomColor: 'rgba(0, 0, 0, 0.16)',
+                    borderBottomWidth: 1,
+                  },
+                }}
+              >
                 <TableCell>
                   <Typography variant="body2" sx={{ fontWeight: 700 }}>{rental.vehicle.model}</Typography>
                   <Typography variant="caption" color="text.secondary">{rental.vehicle.license_plate}</Typography>
