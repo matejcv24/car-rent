@@ -1,7 +1,7 @@
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos'
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos'
 import { Box, Button, ButtonGroup, FormControl, MenuItem, Paper, Select, Typography } from '@mui/material'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import RentalPill from './RentalPill.jsx'
 import { formatWeekLabel } from '../utils/dateUtils.js'
 
@@ -11,14 +11,6 @@ function includesDate(range, date) {
 
 export default function WeeklyCalendar({ calendar, onPrevious, onToday, onNext, onRenterClick }) {
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState('all')
-  const calendarScrollRef = useRef(null)
-  const touchScrollRef = useRef({
-    axis: null,
-    scrollLeft: 0,
-    scrollTop: 0,
-    startX: 0,
-    startY: 0,
-  })
   const vehicleColumnWidth = 92
   const dateColumnWidth = 62
   const calendarColumns = `${vehicleColumnWidth}px repeat(7, ${dateColumnWidth}px)`
@@ -28,66 +20,6 @@ export default function WeeklyCalendar({ calendar, onPrevious, onToday, onNext, 
   const visibleVehicles = vehicleTypeFilter === 'all'
     ? calendar.vehicles
     : calendar.vehicles.filter((vehicle) => vehicle.type === vehicleTypeFilter)
-
-  const handleCalendarTouchStart = (event) => {
-    const touch = event.touches[0]
-    const scrollElement = calendarScrollRef.current
-
-    if (!touch || !scrollElement) return
-
-    touchScrollRef.current = {
-      axis: null,
-      scrollLeft: scrollElement.scrollLeft,
-      scrollTop: scrollElement.scrollTop,
-      startX: touch.clientX,
-      startY: touch.clientY,
-    }
-  }
-
-  const handleCalendarTouchMove = (event) => {
-    const touch = event.touches[0]
-    const scrollElement = calendarScrollRef.current
-
-    if (!touch || !scrollElement) return
-
-    const state = touchScrollRef.current
-    const deltaX = state.startX - touch.clientX
-    const deltaY = state.startY - touch.clientY
-    const absoluteDeltaX = Math.abs(deltaX)
-    const absoluteDeltaY = Math.abs(deltaY)
-
-    if (!state.axis && (absoluteDeltaX > 6 || absoluteDeltaY > 6)) {
-      state.axis = absoluteDeltaX > absoluteDeltaY ? 'x' : 'y'
-    }
-
-    if (state.axis === 'x') {
-      event.preventDefault()
-
-      const maxScrollLeft = scrollElement.scrollWidth - scrollElement.clientWidth
-      scrollElement.scrollLeft = Math.min(Math.max(state.scrollLeft + deltaX, 0), maxScrollLeft)
-      scrollElement.scrollTop = state.scrollTop
-    }
-
-    if (state.axis === 'y') {
-      scrollElement.scrollLeft = state.scrollLeft
-    }
-  }
-
-  const handleCalendarTouchEnd = () => {
-    touchScrollRef.current.axis = null
-  }
-
-  useEffect(() => {
-    const scrollElement = calendarScrollRef.current
-
-    if (!scrollElement) return undefined
-
-    scrollElement.addEventListener('touchmove', handleCalendarTouchMove, { passive: false })
-
-    return () => {
-      scrollElement.removeEventListener('touchmove', handleCalendarTouchMove)
-    }
-  })
 
   return (
     <Paper variant="outlined" sx={{ overflow: 'hidden', boxShadow: 'none' }}>
@@ -115,16 +47,13 @@ export default function WeeklyCalendar({ calendar, onPrevious, onToday, onNext, 
       </Box>
 
       <Box
-        ref={calendarScrollRef}
-        onTouchStart={handleCalendarTouchStart}
-        onTouchEnd={handleCalendarTouchEnd}
-        onTouchCancel={handleCalendarTouchEnd}
         sx={{
           width: '100%',
           maxWidth: '100%',
           overflowX: 'auto',
           overflowY: 'hidden',
-          overscrollBehaviorX: 'none',
+          overscrollBehaviorX: 'contain',
+          touchAction: 'pan-x pan-y',
           WebkitOverflowScrolling: 'touch',
         }}
       >

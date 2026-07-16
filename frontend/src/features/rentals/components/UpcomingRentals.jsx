@@ -18,7 +18,6 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material'
-import { useEffect, useRef } from 'react'
 import { formatShortDate } from '../../calendar/utils/dateUtils.js'
 
 function PaymentChip({ status }) {
@@ -75,79 +74,6 @@ function RenterName({ renter }) {
 }
 
 export default function UpcomingRentals({ rentals, onEditRental, onDeleteRental }) {
-  const tableScrollRef = useRef(null)
-  const touchScrollRef = useRef({
-    axis: null,
-    scrollLeft: 0,
-    scrollTop: 0,
-    startX: 0,
-    startY: 0,
-  })
-
-  const handleTableTouchStart = (event) => {
-    const touch = event.touches[0]
-    const scrollElement = tableScrollRef.current
-
-    if (!touch || !scrollElement) return
-
-    touchScrollRef.current = {
-      axis: null,
-      scrollLeft: scrollElement.scrollLeft,
-      scrollTop: scrollElement.scrollTop,
-      startX: touch.clientX,
-      startY: touch.clientY,
-    }
-  }
-
-  const handleTableTouchMove = (event) => {
-    const touch = event.touches[0]
-    const scrollElement = tableScrollRef.current
-
-    if (!touch || !scrollElement) return
-
-    const state = touchScrollRef.current
-    const deltaX = state.startX - touch.clientX
-    const deltaY = state.startY - touch.clientY
-    const absoluteDeltaX = Math.abs(deltaX)
-    const absoluteDeltaY = Math.abs(deltaY)
-
-    if (!state.axis && (absoluteDeltaX > 6 || absoluteDeltaY > 6)) {
-      state.axis = absoluteDeltaX > absoluteDeltaY ? 'x' : 'y'
-    }
-
-    if (state.axis === 'x') {
-      event.preventDefault()
-
-      const maxScrollLeft = scrollElement.scrollWidth - scrollElement.clientWidth
-      scrollElement.scrollLeft = Math.min(Math.max(state.scrollLeft + deltaX, 0), maxScrollLeft)
-      scrollElement.scrollTop = state.scrollTop
-    }
-
-    if (state.axis === 'y') {
-      event.preventDefault()
-
-      const maxScrollTop = scrollElement.scrollHeight - scrollElement.clientHeight
-      scrollElement.scrollTop = Math.min(Math.max(state.scrollTop + deltaY, 0), maxScrollTop)
-      scrollElement.scrollLeft = state.scrollLeft
-    }
-  }
-
-  const handleTableTouchEnd = () => {
-    touchScrollRef.current.axis = null
-  }
-
-  useEffect(() => {
-    const scrollElement = tableScrollRef.current
-
-    if (!scrollElement) return undefined
-
-    scrollElement.addEventListener('touchmove', handleTableTouchMove, { passive: false })
-
-    return () => {
-      scrollElement.removeEventListener('touchmove', handleTableTouchMove)
-    }
-  })
-
   return (
     <Box component="section" sx={{ mt: 1.5 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -156,19 +82,15 @@ export default function UpcomingRentals({ rentals, onEditRental, onDeleteRental 
       </Box>
 
       <TableContainer
-        ref={tableScrollRef}
         component={Paper}
         variant="outlined"
-        onTouchStart={handleTableTouchStart}
-        onTouchEnd={handleTableTouchEnd}
-        onTouchCancel={handleTableTouchEnd}
         sx={{
           boxShadow: 'none',
           maxHeight: 320,
           maxWidth: '100%',
           overflow: 'auto',
           overscrollBehavior: 'contain',
-          overscrollBehaviorX: 'none',
+          touchAction: 'pan-x pan-y',
           WebkitOverflowScrolling: 'touch',
         }}
       >
