@@ -13,7 +13,7 @@ import {
   Toolbar,
   Tooltip,
 } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import api from '../../config/api.js'
 import useAuthStore from '../../store/authStore.js'
@@ -27,6 +27,7 @@ const navItems = [
 export default function AppLayout() {
   const location = useLocation()
   const navigate = useNavigate()
+  const mainRef = useRef(null)
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
   const [vehicleCount, setVehicleCount] = useState(null)
@@ -40,7 +41,7 @@ export default function AppLayout() {
 
   useEffect(() => {
     const updateModalState = () => {
-      setIsModalOpen(Boolean(document.querySelector('.MuiModal-root')))
+      setIsModalOpen(Boolean(document.querySelector('.MuiModal-root:not([aria-hidden="true"])')))
     }
 
     const observer = new MutationObserver(updateModalState)
@@ -49,6 +50,51 @@ export default function AppLayout() {
 
     return () => observer.disconnect()
   }, [])
+
+  useEffect(() => {
+    const mainElement = mainRef.current
+
+    if (!isModalOpen || !mainElement) {
+      return undefined
+    }
+
+    const previousMainOverflow = mainElement.style.overflow
+    const previousBodyOverflow = document.body.style.overflow
+    const previousHtmlOverflow = document.documentElement.style.overflow
+    const previousBodyOverscroll = document.body.style.overscrollBehavior
+
+    mainElement.style.overflow = 'hidden'
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+    document.body.style.overscrollBehavior = 'none'
+
+    const preventBackgroundScroll = (event) => {
+      const target = event.target
+
+      if (!(target instanceof Element)) {
+        event.preventDefault()
+        return
+      }
+
+      if (target.closest('.MuiDialog-paper, .MuiPopover-paper, .MuiMenu-paper')) {
+        return
+      }
+
+      event.preventDefault()
+    }
+
+    document.addEventListener('touchmove', preventBackgroundScroll, { passive: false })
+    document.addEventListener('wheel', preventBackgroundScroll, { passive: false })
+
+    return () => {
+      mainElement.style.overflow = previousMainOverflow
+      document.body.style.overflow = previousBodyOverflow
+      document.documentElement.style.overflow = previousHtmlOverflow
+      document.body.style.overscrollBehavior = previousBodyOverscroll
+      document.removeEventListener('touchmove', preventBackgroundScroll)
+      document.removeEventListener('wheel', preventBackgroundScroll)
+    }
+  }, [isModalOpen])
 
   const activePath = location.pathname.startsWith('/vehicles') ? '/vehicles' : '/'
   const signOut = async () => {
@@ -93,6 +139,7 @@ export default function AppLayout() {
       </AppBar>
 
       <Container
+        ref={mainRef}
         component="main"
         maxWidth="lg"
         sx={{
