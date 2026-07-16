@@ -1,6 +1,8 @@
 import AddRoundedIcon from '@mui/icons-material/AddRounded'
+import AirportShuttleIcon from '@mui/icons-material/AirportShuttle'
 import CalendarTodayRoundedIcon from '@mui/icons-material/CalendarTodayRounded'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
+import DirectionsCarIcon from '@mui/icons-material/DirectionsCar'
 import {
   Alert,
   Box,
@@ -46,7 +48,6 @@ const initialRentalForm = {
   startDate: '',
   endDate: '',
   paidStatus: '',
-  totalPrice: '',
 }
 
 function formatDateDisplay(value) {
@@ -91,9 +92,6 @@ function VehicleCard({ vehicle, isSelected, onSelect, onEdit, onHistory }) {
         </Typography>
         <Stack spacing={0.5}>
           <Typography variant="body2" sx={{ fontSize: { xs: 11, sm: 14 } }}>
-            Type: {vehicle.type === 'van' ? 'Van' : 'Car'}
-          </Typography>
-          <Typography variant="body2" sx={{ fontSize: { xs: 11, sm: 14 } }}>
             Registration from: {formatDateDisplay(vehicle.registration?.start_date)}
           </Typography>
           <Typography variant="body2" sx={{ fontSize: { xs: 11, sm: 14 } }}>
@@ -122,10 +120,14 @@ function VehicleCard({ vehicle, isSelected, onSelect, onEdit, onHistory }) {
   )
 }
 
-function VehicleSection({ title, vehicles, selectedVehicleId, onSelectVehicle, onEditVehicle, onShowHistory }) {
+function VehicleSection({ title, icon, vehicles, selectedVehicleId, onSelectVehicle, onEditVehicle, onShowHistory }) {
   return (
     <Box>
-      <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 900 }}>
+      <Typography
+        variant="overline"
+        sx={{ color: 'text.secondary', fontWeight: 900, display: 'inline-flex', alignItems: 'center', gap: 0.75 }}
+      >
+        {icon}
         {title}
       </Typography>
       <Box
@@ -289,7 +291,6 @@ export default function VehiclesPage() {
       startDate: rental.start_date ?? '',
       endDate: rental.end_date ?? '',
       paidStatus: rental.payment_status ?? '',
-      totalPrice: rental.total_price ?? '',
     })
     setRentalSaveError('')
     setRentalFieldErrors({})
@@ -430,7 +431,6 @@ export default function VehiclesPage() {
         start_date: rentalForm.startDate,
         end_date: rentalForm.endDate,
         payment_status: rentalForm.paidStatus === 'paid' ? 'paid' : 'unpaid',
-        total_price: Number(rentalForm.totalPrice || 0),
         renter: {
           first_name: rentalForm.name.trim(),
           last_name: '',
@@ -457,7 +457,6 @@ export default function VehiclesPage() {
         startDate: errors.start_date?.[0],
         endDate: errors.end_date?.[0],
         paidStatus: errors.payment_status?.[0],
-        totalPrice: errors.total_price?.[0],
       })
       setRentalSaveError(getApiMessage(error, 'Failed to save rental. Please try again.'))
     } finally {
@@ -612,6 +611,7 @@ export default function VehiclesPage() {
           <Box sx={{ display: 'grid', gap: 3 }}>
             <VehicleSection
               title="Cars"
+              icon={<DirectionsCarIcon fontSize="small" />}
               vehicles={cars}
               selectedVehicleId={selectedVehicleId}
               onSelectVehicle={setSelectedVehicleId}
@@ -620,6 +620,7 @@ export default function VehiclesPage() {
             />
             <VehicleSection
               title="Vans"
+              icon={<AirportShuttleIcon fontSize="small" />}
               vehicles={vans}
               selectedVehicleId={selectedVehicleId}
               onSelectVehicle={setSelectedVehicleId}
@@ -801,7 +802,7 @@ export default function VehiclesPage() {
             <Typography sx={{ fontWeight: 800 }}>Rental history</Typography>
             {historyVehicle && (
               <Typography variant="body2" color="text.secondary">
-                {historyVehicle.license_plate} - {historyVehicle.model}
+                {historyVehicle.model} - {historyVehicle.license_plate}
               </Typography>
             )}
           </Box>
@@ -818,7 +819,7 @@ export default function VehiclesPage() {
             <Typography sx={{ fontWeight: 800 }}>Rental details</Typography>
             {selectedRental && (
               <Typography variant="body2" color="text.secondary">
-                {selectedRental.vehicle.license_plate} - {selectedRental.vehicle.model}
+                {selectedRental.vehicle.model} - {selectedRental.vehicle.license_plate}
               </Typography>
             )}
           </Box>
@@ -914,7 +915,7 @@ export default function VehiclesPage() {
               />
             </Box>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+            <Box>
               <FormControl fullWidth error={Boolean(rentalFieldErrors.paidStatus)} disabled={isRentalSaving || isRentalDeleting}>
                 <InputLabel>Payment status</InputLabel>
                 <Select
@@ -931,17 +932,6 @@ export default function VehiclesPage() {
                   </Typography>
                 )}
               </FormControl>
-              <TextField
-                label="Total price"
-                type="number"
-                value={rentalForm.totalPrice}
-                onChange={(event) => updateRentalField('totalPrice', event.target.value)}
-                error={Boolean(rentalFieldErrors.totalPrice)}
-                helperText={rentalFieldErrors.totalPrice}
-                fullWidth
-                disabled={isRentalSaving || isRentalDeleting}
-                slotProps={{ htmlInput: { min: 0, step: '0.01' } }}
-              />
             </Box>
           </Stack>
         </DialogContent>
